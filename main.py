@@ -95,10 +95,12 @@ def rotate_vertices(vertices, angle_x, angle_y, angle_z):
 # Функция для преобразования трехмерных координат в экранные координаты
 def project(vertex):
     scale = 200  # масштаб
-    distance = 5  # расстояние до экрана
+    distance = cube_params['distance']  # расстояние до экрана
+    if distance == 0:
+        return [0, 0]  # Если расстояние равно нулю, возвращаем начало экрана
     x = vertex[0] * scale / (distance - vertex[2])
     y = vertex[1] * scale / (distance - vertex[2])
-    return [int(x + screen_width / 2), int(y + screen_height / 2)]
+    return [x + screen_width / 2, y + screen_height / 2]
 
 
 # Функция для создания градиентного неба
