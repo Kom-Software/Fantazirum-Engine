@@ -67,7 +67,7 @@ params_window_open = False
 mode = 'main'
 music = 'none'
 
-with open('settings.json', 'r', encoding='UTF-8') as stt:
+with open('./src/settings.json', 'r', encoding='UTF-8') as stt:
     settings = stt.read()
 
 # Функция для вращения вершин куба вокруг осей X, Y, Z
