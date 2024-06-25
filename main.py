@@ -1,20 +1,22 @@
-import pygame
-from pygame.locals import *
-import sys
 import math
-import numpy as np
+import sys
 import tkinter as tk
 from tkinter import colorchooser, ttk
+
+import numpy as np
+import pygame
+from pygame.locals import *
 
 # Инициализация Pygame
 pygame.init()
 pygame.mixer.init()
 
 # Настройки окна Pygame
-screen_width = 800
-screen_height = 600
+screen_width = 1280
+screen_height = 720
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption('Space Engine')
+pygame.display.set_icon(pygame.image.load('icon.ico'))
 
 # Цвета
 WHITE = (255, 255, 255)
@@ -42,7 +44,7 @@ faces = [
     (5, 4, 7, 6),  # back face
     (4, 0, 3, 7),  # left face
     (3, 2, 6, 7),  # top face
-    (4, 5, 1, 0)   # bottom face
+    (4, 5, 1, 0)  # bottom face
 ]
 
 # Текущий материал (цвет)
@@ -64,6 +66,10 @@ params_window_open = False
 
 mode = 'main'
 music = 'none'
+
+with open('settings.json', 'r', encoding='UTF-8') as stt:
+    settings = stt.read()
+
 # Функция для вращения вершин куба вокруг осей X, Y, Z
 def rotate_vertices(vertices, angle_x, angle_y, angle_z):
     rotation_matrix_x = np.array([
@@ -100,7 +106,7 @@ def project(vertex):
     distance = cube_params['distance']  # расстояние до экрана
     if distance - vertex[2] == 0:
         distance -= 1
-    x = vertex[0] *  scale / (distance - vertex[2])
+    x = vertex[0] * scale / (distance - vertex[2])
     y = vertex[1] * scale / (distance - vertex[2])
     return [x + screen_width / 2, y + screen_height / 2]
 
@@ -227,15 +233,17 @@ def update_cube_params_z(value):
 
 
 def update_cube_pos_x(value):
-    cube_params['pos_x'] = int(value)
+    cube_params['pos_x'] = float(value)
 
 
 def update_cube_pos_y(value):
-    cube_params['pos_y'] = int(value)
+    cube_params['pos_y'] = float(value)
 
 
 def update_cube_pos_z(value):
-    cube_params['pos_z'] = int(value)
+    cube_params['pos_z'] = float(value)
+
+
 # Функция для обновления положения камеры
 
 
@@ -243,6 +251,8 @@ def update_cube_pos_z(value):
 def move_camera(direction):
     global camera_pos
     camera_pos = update_camera_position(camera_pos + direction)
+
+
 def update_camera_position(camera_pos):
     global cube_params
     cube_params['pos_x'] = camera_pos[0]
@@ -382,9 +392,15 @@ def main():
                     # Запуск или остановка куба
                     cube_visible = not cube_visible
                 elif event.key == K_UP:
-                    camera_pos[2] += 1
+                    try:
+                        camera_pos[2] += 1
+                    except:
+                        print("Oops! Some error has occured!")
                 elif event.key == K_DOWN:
-                    camera_pos[2] -= 1
+                    try:
+                        camera_pos[2] -= 1
+                    except:
+                        print("Oops! Some error has occured!")
                 elif event.key == K_LEFT:
                     camera_pos[0] -= 1
                 elif event.key == K_RIGHT:
@@ -397,7 +413,7 @@ def main():
                 if event.button == 1 and alt_pressed:  # Левая кнопка мыши при зажатой Alt
                     mouse_pressed = True
                     prev_mouse_pos = pygame.mouse.get_pos()
-                elif event.button == 4: # Прокрутка колёсика мыши вверх
+                elif event.button == 4:  # Прокрутка колёсика мыши вверх
                     try:
                         increase_distance()
                     except:
@@ -439,8 +455,5 @@ def main():
         clock.tick(60)
 
 
-
-
 if mode == 'main':
     main()
-
