@@ -245,11 +245,12 @@ def update_cube_pos_z(value):
 
 
 # Функция для обновления положения камеры
-
+global camera_pos
+camera_pos = [0, 0, 0]
 
 # Функция для обновления положения камеры при нажатии стрелок
 def move_camera(direction):
-    global camera_pos
+    #global camera_pos
     camera_pos = update_camera_position(camera_pos + direction)
 
 
