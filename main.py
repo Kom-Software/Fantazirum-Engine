@@ -22,6 +22,7 @@ pygame.display.set_icon(pygame.image.load('icon.ico'))
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GRAY = (150, 150, 150)
+BLUE = (0, 0, 255)
 EDGE_COLOR = (50, 50, 50)  # Цвет рёбер
 FACE_COLOR = WHITE  # Белый цвет для граней куба
 
@@ -167,7 +168,7 @@ def create_material():
     if color_dialog:
         current_material = color_dialog
 
-
+global polygon
 # Функция для отрисовки куба с текущим материалом
 def draw_cube(vertices, angle_x, angle_y, angle_z):
     rotated_vertices = rotate_vertices(vertices, angle_x, angle_y, angle_z)
@@ -209,7 +210,7 @@ def draw_cube(vertices, angle_x, angle_y, angle_z):
         cosine_angle = np.dot(ray_to_vertex, ray_direction)
         if cosine_angle <= 0:
             continue  # Грань не видна (луч направлен в противоположную сторону или перпендикулярен)
-
+        global polygon
         polygon = [project(translated_vertices[vertex_index]) for vertex_index in face]
         pygame.draw.polygon(screen, current_material, polygon)
         # Рисуем рёбра грани (тёмные)
@@ -322,12 +323,45 @@ def show_cube_params_window():
 
     root.mainloop()
 
+def mouse_choose_check_cube():
+    can_choose_mouse: bool
+    can_choose_mouse = True
+    global polygon
+    global mouse_pressed
+    start = polygon[0]
+    if current_mouse_pos[0] <= start[0]:
+        can_choose_mouse = False
+    if current_mouse_pos[1] <= start[1]:
+        can_choose_mouse = False;
+
+    start = polygon[1]
+    if current_mouse_pos[0] >= start[0]:
+        can_choose_mouse = False
+    start = polygon[3]
+    if current_mouse_pos[1] >= start[1]:
+        can_choose_mouse = False;
+
+    #if current_mouse_pos <= polygon[0]:
+    #    can_choose_mouse = False
+    #if current_mouse_pos >= polygon[1]:
+    #    can_choose_mouse = False
+    global current_material
+    if can_choose_mouse == True:
+        #print("в зоне нажатия")
+        if mouse_pressed:
+            current_material = BLUE
+    if can_choose_mouse == False:
+        current_material = WHITE
+        
+
+
 
 # Основная функция отрисовки и управления
 def main():
     clock = pygame.time.Clock()
     angle_x, angle_y, angle_z = 0, 0, 0
     alt_pressed = False
+    global mouse_pressed
     mouse_pressed = False
     prev_mouse_pos = None
     cube_visible = True
@@ -339,6 +373,8 @@ def main():
     start_button = pygame.Rect(20, 20, 120, 50)
     start_button_text = pygame.font.Font(None, 36).render('Start/Stop', True, WHITE)
     start_button_text_rect = start_button_text.get_rect(center=start_button.center)
+
+    global current_mouse_pos
 
     while True:
         for event in pygame.event.get():
@@ -411,9 +447,10 @@ def main():
                 if event.key == K_LALT or event.key == K_RALT:
                     alt_pressed = False
             elif event.type == MOUSEBUTTONDOWN:
-                if event.button == 1 and alt_pressed:  # Левая кнопка мыши при зажатой Alt
+                if event.button == 1:  # Левая кнопка мыши при зажатой Alt
                     mouse_pressed = True
-                    prev_mouse_pos = pygame.mouse.get_pos()
+                    if alt_pressed:
+                        prev_mouse_pos = pygame.mouse.get_pos()
                 elif event.button == 4:  # Прокрутка колёсика мыши вверх
                     try:
                         increase_distance()
@@ -437,10 +474,10 @@ def main():
 
         # Рисуем небо (градиент)
         draw_sky_gradient()
-
+        current_mouse_pos = pygame.mouse.get_pos()
         # Поворот куба с помощью мыши и зажатой клавиши Alt
         if mouse_pressed and alt_pressed:
-            current_mouse_pos = pygame.mouse.get_pos()
+            #current_mouse_pos = pygame.mouse.get_pos()
             if prev_mouse_pos:
                 dx = current_mouse_pos[0] - prev_mouse_pos[0]
                 dy = current_mouse_pos[1] - prev_mouse_pos[1]
@@ -451,6 +488,8 @@ def main():
         # Отрисовка куба, если он видим
         if cube_visible:
             draw_cube(vertices, angle_x, angle_y, angle_z)
+
+        mouse_choose_check_cube()
 
         pygame.display.flip()
         clock.tick(60)
