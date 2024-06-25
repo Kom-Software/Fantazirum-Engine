@@ -430,7 +430,7 @@ def main():
                     mouse_pressed = False
 
         screen.fill(BLACK)
-
+        update_camera_position(camera_pos)
         # Рисуем кнопку Start/Stop
         pygame.draw.rect(screen, GRAY, start_button)
         screen.blit(start_button_text, start_button_text_rect)
