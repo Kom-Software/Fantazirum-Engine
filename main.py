@@ -8,13 +8,13 @@ from tkinter import colorchooser, ttk
 
 # Инициализация Pygame
 pygame.init()
+pygame.mixer.init()
 
 # Настройки окна Pygame
-screen_width = 1600
-screen_height = 900
+screen_width = 800
+screen_height = 600
 screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption('Space Engine(on development!!!!!)')
-pygame.display.set_icon(pygame.image.load('icon.ico'))
+pygame.display.set_caption('Space Engine')
 
 # Цвета
 WHITE = (255, 255, 255)
@@ -42,7 +42,7 @@ faces = [
     (5, 4, 7, 6),  # back face
     (4, 0, 3, 7),  # left face
     (3, 2, 6, 7),  # top face
-    (4, 5, 1, 0)  # bottom face
+    (4, 5, 1, 0)   # bottom face
 ]
 
 # Текущий материал (цвет)
@@ -55,13 +55,15 @@ cube_params = {
     'scale_z': 1,
     'pos_x': 0,
     'pos_y': 0,
-    'pos_z': 0
+    'pos_z': 0,
+    'distance': 5  # начальное расстояние до камеры
 }
 
 # Флаг для открытия окна параметров
 params_window_open = False
 
-
+mode = 'main'
+music = 'none'
 # Функция для вращения вершин куба вокруг осей X, Y, Z
 def rotate_vertices(vertices, angle_x, angle_y, angle_z):
     rotation_matrix_x = np.array([
@@ -96,9 +98,9 @@ def rotate_vertices(vertices, angle_x, angle_y, angle_z):
 def project(vertex):
     scale = 200  # масштаб
     distance = cube_params['distance']  # расстояние до экрана
-    if distance == 0:
-        return [0, 0]  # Если расстояние равно нулю, возвращаем начало экрана
-    x = vertex[0] * scale / (distance - vertex[2])
+    if distance - vertex[2] == 0:
+        distance -= 1
+    x = vertex[0] *  scale / (distance - vertex[2])
     y = vertex[1] * scale / (distance - vertex[2])
     return [x + screen_width / 2, y + screen_height / 2]
 
@@ -181,7 +183,27 @@ def draw_cube(vertices, angle_x, angle_y, angle_z):
         ]
         translated_vertices.append(translated_vertex)
 
-    for face in faces:
+    # Отсортируем грани куба по их дальности от камеры (по Z координате центра грани)
+    sorted_faces = sorted(faces, key=lambda face: np.mean([translated_vertices[idx][2] for idx in face]), reverse=True)
+
+    for face in sorted_faces:
+        # Найдём центр грани
+        face_center = np.mean([translated_vertices[idx] for idx in face], axis=0)
+
+        # Вектор от камеры к центру грани
+        ray_direction = np.array(face_center) - np.array([0, 0, cube_params['distance']])
+        ray_direction /= np.linalg.norm(ray_direction)  # Нормализуем вектор
+
+        # Вектор от камеры к вершине грани (первой вершине в face)
+        ray_origin = np.array([0, 0, cube_params['distance']])
+        face_vertex = translated_vertices[face[0]]
+        ray_to_vertex = np.array(face_vertex) - ray_origin
+
+        # Проверка на видимость грани
+        cosine_angle = np.dot(ray_to_vertex, ray_direction)
+        if cosine_angle <= 0:
+            continue  # Грань не видна (луч направлен в противоположную сторону или перпендикулярен)
+
         polygon = [project(translated_vertices[vertex_index]) for vertex_index in face]
         pygame.draw.polygon(screen, current_material, polygon)
         # Рисуем рёбра грани (тёмные)
@@ -214,6 +236,26 @@ def update_cube_pos_y(value):
 
 def update_cube_pos_z(value):
     cube_params['pos_z'] = int(value)
+# Функция для обновления положения камеры
+
+
+# Функция для обновления положения камеры при нажатии стрелок
+def move_camera(direction):
+    global camera_pos
+    camera_pos = update_camera_position(camera_pos + direction)
+def update_camera_position(camera_pos):
+    global cube_params
+    cube_params['pos_x'] = camera_pos[0]
+    cube_params['pos_y'] = camera_pos[1]
+    cube_params['pos_z'] = camera_pos[2]
+
+
+def increase_distance():
+    cube_params['distance'] -= 0.5
+
+
+def decrease_distance():
+    cube_params['distance'] += 0.5
 
 
 # Функция для отображения окна с параметрами куба
@@ -231,35 +273,41 @@ def show_cube_params_window():
 
     root.protocol("WM_DELETE_WINDOW", on_closing)
 
-    scale_x_label = ttk.Label(root, text="Масштаб по X")
-    scale_x_label.grid(row=0, column=0)
-    scale_x_slider = ttk.Scale(root, from_=1, to=200, orient=tk.HORIZONTAL, command=update_cube_params_x)
-    scale_x_slider.grid(row=0, column=1)
+    scale_x_label = ttk.Label(root, text="Масштаб X")
+    scale_x_label.pack()
+    scale_x_scale = ttk.Scale(root, from_=1, to=20, orient=tk.HORIZONTAL, command=update_cube_params_x)
+    scale_x_scale.set(cube_params['scale_x'] * 10)
+    scale_x_scale.pack()
 
-    scale_y_label = ttk.Label(root, text="Масштаб по Y")
-    scale_y_label.grid(row=1, column=0)
-    scale_y_slider = ttk.Scale(root, from_=1, to=200, orient=tk.HORIZONTAL, command=update_cube_params_y)
-    scale_y_slider.grid(row=1, column=1)
+    scale_y_label = ttk.Label(root, text="Масштаб Y")
+    scale_y_label.pack()
+    scale_y_scale = ttk.Scale(root, from_=1, to=20, orient=tk.HORIZONTAL, command=update_cube_params_y)
+    scale_y_scale.set(cube_params['scale_y'] * 10)
+    scale_y_scale.pack()
 
-    scale_z_label = ttk.Label(root, text="Масштаб по Z")
-    scale_z_label.grid(row=2, column=0)
-    scale_z_slider = ttk.Scale(root, from_=1, to=200, orient=tk.HORIZONTAL, command=update_cube_params_z)
-    scale_z_slider.grid(row=2, column=1)
+    scale_z_label = ttk.Label(root, text="Масштаб Z")
+    scale_z_label.pack()
+    scale_z_scale = ttk.Scale(root, from_=1, to=20, orient=tk.HORIZONTAL, command=update_cube_params_z)
+    scale_z_scale.set(cube_params['scale_z'] * 10)
+    scale_z_scale.pack()
 
-    pos_x_label = ttk.Label(root, text="Положение по X")
-    pos_x_label.grid(row=3, column=0)
-    pos_x_slider = ttk.Scale(root, from_=-400, to=400, orient=tk.HORIZONTAL, command=update_cube_pos_x)
-    pos_x_slider.grid(row=3, column=1)
+    pos_x_label = ttk.Label(root, text="Позиция X")
+    pos_x_label.pack()
+    pos_x_scale = ttk.Scale(root, from_=-200, to=200, orient=tk.HORIZONTAL, command=update_cube_pos_x)
+    pos_x_scale.set(cube_params['pos_x'])
+    pos_x_scale.pack()
 
-    pos_y_label = ttk.Label(root, text="Положение по Y")
-    pos_y_label.grid(row=4, column=0)
-    pos_y_slider = ttk.Scale(root, from_=-300, to=300, orient=tk.HORIZONTAL, command=update_cube_pos_y)
-    pos_y_slider.grid(row=4, column=1)
+    pos_y_label = ttk.Label(root, text="Позиция Y")
+    pos_y_label.pack()
+    pos_y_scale = ttk.Scale(root, from_=-200, to=200, orient=tk.HORIZONTAL, command=update_cube_pos_y)
+    pos_y_scale.set(cube_params['pos_y'])
+    pos_y_scale.pack()
 
-    pos_z_label = ttk.Label(root, text="Положение по Z")
-    pos_z_label.grid(row=5, column=0)
-    pos_z_slider = ttk.Scale(root, from_=-200, to=200, orient=tk.HORIZONTAL, command=update_cube_pos_z)
-    pos_z_slider.grid(row=5, column=1)
+    pos_z_label = ttk.Label(root, text="Позиция Z")
+    pos_z_label.pack()
+    pos_z_scale = ttk.Scale(root, from_=-200, to=200, orient=tk.HORIZONTAL, command=update_cube_pos_z)
+    pos_z_scale.set(cube_params['pos_z'])
+    pos_z_scale.pack()
 
     root.mainloop()
 
@@ -275,6 +323,11 @@ def main():
     cube_stack = []  # Стек для хранения состояний видимости куба
 
     global params_window_open
+    global cube_params
+
+    start_button = pygame.Rect(20, 20, 120, 50)
+    start_button_text = pygame.font.Font(None, 36).render('Start/Stop', True, WHITE)
+    start_button_text_rect = start_button_text.get_rect(center=start_button.center)
 
     while True:
         for event in pygame.event.get():
@@ -321,6 +374,21 @@ def main():
                     else:
                         root.destroy()
                         params_window_open = False
+                elif event.key == K_EQUALS or event.key == K_PLUS:
+                    increase_distance()  # Увеличение расстояния (отдаление)
+                elif event.key == K_MINUS:
+                    decrease_distance()  # Уменьшение расстояния (приближение)
+                elif event.key == K_SPACE:
+                    # Запуск или остановка куба
+                    cube_visible = not cube_visible
+                elif event.key == K_UP:
+                    camera_pos[2] += 1
+                elif event.key == K_DOWN:
+                    camera_pos[2] -= 1
+                elif event.key == K_LEFT:
+                    camera_pos[0] -= 1
+                elif event.key == K_RIGHT:
+                    camera_pos[0] += 1
 
             elif event.type == KEYUP:
                 if event.key == K_LALT or event.key == K_RALT:
@@ -329,11 +397,26 @@ def main():
                 if event.button == 1 and alt_pressed:  # Левая кнопка мыши при зажатой Alt
                     mouse_pressed = True
                     prev_mouse_pos = pygame.mouse.get_pos()
+                elif event.button == 4: # Прокрутка колёсика мыши вверх
+                    try:
+                        increase_distance()
+                    except:
+                        pass
+                elif event.button == 5:  # Прокрутка колёсика мыши вниз
+                    try:
+                        decrease_distance()
+                    except:
+                        pass
+
             elif event.type == MOUSEBUTTONUP:
                 if event.button == 1:
                     mouse_pressed = False
 
         screen.fill(BLACK)
+
+        # Рисуем кнопку Start/Stop
+        pygame.draw.rect(screen, GRAY, start_button)
+        screen.blit(start_button_text, start_button_text_rect)
 
         # Рисуем небо (градиент)
         draw_sky_gradient()
@@ -356,5 +439,8 @@ def main():
         clock.tick(60)
 
 
-if __name__ == '__main__':
+
+
+if mode == 'main':
     main()
+
