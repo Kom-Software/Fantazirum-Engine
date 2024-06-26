@@ -15,13 +15,14 @@ class Cube():
     (4, 0, 3, 7),  # left face
     (3, 2, 6, 7),  # top face
     (4, 5, 1, 0)  # bottom face
-], current_material = 'WHITE', cube_params = {
+], current_material = (255, 255, 255), cube_params = {
     'scale_x': 1,
     'scale_y': 1,
-    'scale_z': 1,
+    'scale_z': 0.5,
     'pos_x': 0,
     'pos_y': 0,
-    'pos_z': 0
+    'pos_z': 0,
+    'distance' : 5
 }):
         self.name = name
         self.vertices = vertices
