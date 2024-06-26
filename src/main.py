@@ -29,7 +29,7 @@ EDGE_COLOR = (50, 50, 50)  # Цвет рёбер
 FACE_COLOR = WHITE  # Белый цвет для граней куба
 
 objects = {
-    'DefaultCube':Cube()
+    'default_cube':Cube()
 }
 
 selected_object = objects['DefaultCube']
