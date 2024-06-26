@@ -6,6 +6,7 @@ from tkinter import colorchooser, ttk
 import numpy as np
 import pygame
 from pygame.locals import *
+from objects import *
 
 # Инициализация Pygame
 pygame.init()
@@ -14,7 +15,7 @@ pygame.mixer.init()
 # Настройки окна Pygame
 screen_width = 1280
 screen_height = 720
-screen = pygame.display.set_mode((screen_width, screen_height))
+screen = pygame.display.set_mode((screen_width, screen_height), flags=(pygame.DOUBLEBUF))
 pygame.display.set_caption('Space Engine')
 pygame.display.set_icon(pygame.image.load('icon.ico'))
 
@@ -26,50 +27,18 @@ BLUE = (0, 0, 255)
 EDGE_COLOR = (50, 50, 50)  # Цвет рёбер
 FACE_COLOR = WHITE  # Белый цвет для граней куба
 
-# Вершины куба
-vertices = [
-    [-1, -1, -1],
-    [1, -1, -1],
-    [1, 1, -1],
-    [-1, 1, -1],
-    [-1, -1, 1],
-    [1, -1, 1],
-    [1, 1, 1],
-    [-1, 1, 1]
-]
-
-# Грани куба, заданные через индексы вершин
-faces = [
-    (0, 1, 2, 3),  # front face
-    (1, 5, 6, 2),  # right face
-    (5, 4, 7, 6),  # back face
-    (4, 0, 3, 7),  # left face
-    (3, 2, 6, 7),  # top face
-    (4, 5, 1, 0)  # bottom face
-]
-
-# Текущий материал (цвет)
-current_material = WHITE
-
-# Параметры куба (размеры и положение)
-cube_params = {
-    'scale_x': 1,
-    'scale_y': 1,
-    'scale_z': 1,
-    'pos_x': 0,
-    'pos_y': 0,
-    'pos_z': 0,
-    'distance': 5  # начальное расстояние до камеры
+objects = {
+    'DefaultCube':Cube()
 }
+
+selected_object = objects['DefaultCube']
+
 
 # Флаг для открытия окна параметров
 params_window_open = False
 
 mode = 'main'
 music = 'none'
-
-with open('./src/settings.json', 'r', encoding='UTF-8') as stt:
-    settings = stt.read()
 
 # Функция для вращения вершин куба вокруг осей X, Y, Z
 def rotate_vertices(vertices, angle_x, angle_y, angle_z):
@@ -103,13 +72,17 @@ def rotate_vertices(vertices, angle_x, angle_y, angle_z):
 
 # Функция для преобразования трехмерных координат в экранные координаты
 def project(vertex):
-    scale = 200  # масштаб
-    distance = cube_params['distance']  # расстояние до экрана
-    if distance - vertex[2] == 0:
-        distance -= 1
-    x = vertex[0] * scale / (distance - vertex[2])
-    y = vertex[1] * scale / (distance - vertex[2])
-    return [x + screen_width / 2, y + screen_height / 2]
+    for cube in objects:
+        if cube == Cube():
+            scale = 200  # масштаб
+            distance = cube.cube_params['distance']  # расстояние до экрана
+            if distance - vertex[2] == 0:
+                distance -= 1
+            x = vertex[0] * scale / (distance - vertex[2])
+            y = vertex[1] * scale / (distance - vertex[2])
+            return [x + screen_width / 2, y + screen_height / 2]
+    else:
+        pass
 
 
 # Функция для создания градиентного неба
@@ -168,106 +141,112 @@ def create_material():
     if color_dialog:
         current_material = color_dialog
 
+
 global polygon
+
+
 # Функция для отрисовки куба с текущим материалом
 def draw_cube(vertices, angle_x, angle_y, angle_z):
-    rotated_vertices = rotate_vertices(vertices, angle_x, angle_y, angle_z)
-    scaled_vertices = []
-    for vertex in rotated_vertices:
-        scaled_vertex = [
-            vertex[0] * cube_params['scale_x'],
-            vertex[1] * cube_params['scale_y'],
-            vertex[2] * cube_params['scale_z']
-        ]
-        scaled_vertices.append(scaled_vertex)
+    for cube in objects:
+        if cube == Cube():
+            rotated_vertices = rotate_vertices(vertices, angle_x, angle_y, angle_z)
+            scaled_vertices = []
+            for vertex in rotated_vertices:
+                scaled_vertex = [
+                    vertex[0] * cube.cube_params['scale_x'],
+                    vertex[1] * cube.cube_params['scale_y'],
+                    vertex[2] * cube.cube_params['scale_z']
+                ]
+                scaled_vertices.append(scaled_vertex)
 
-    translated_vertices = []
-    for vertex in scaled_vertices:
-        translated_vertex = [
-            vertex[0] + cube_params['pos_x'],
-            vertex[1] + cube_params['pos_y'],
-            vertex[2] + cube_params['pos_z']
-        ]
-        translated_vertices.append(translated_vertex)
+            translated_vertices = []
+            for vertex in scaled_vertices:
+                translated_vertex = [
+                    vertex[0] + cube.cube_params['pos_x'],
+                    vertex[1] + cube.cube_params['pos_y'],
+                    vertex[2] + cube.cube_params['pos_z']
+                ]
+                translated_vertices.append(translated_vertex)
 
-    # Отсортируем грани куба по их дальности от камеры (по Z координате центра грани)
-    sorted_faces = sorted(faces, key=lambda face: np.mean([translated_vertices[idx][2] for idx in face]), reverse=True)
+            # Отсортируем грани куба по их дальности от камеры (по Z координате центра грани)
+            sorted_faces = sorted(selected_object.faces,
+                                  key=lambda face: np.mean([translated_vertices[idx][2] for idx in face]), reverse=True)
 
-    for face in sorted_faces:
-        # Найдём центр грани
-        face_center = np.mean([translated_vertices[idx] for idx in face], axis=0)
+            for face in sorted_faces:
+                # Найдём центр грани
+                face_center = np.mean([translated_vertices[idx] for idx in face], axis=0)
 
-        # Вектор от камеры к центру грани
-        ray_direction = np.array(face_center) - np.array([0, 0, cube_params['distance']])
-        ray_direction /= np.linalg.norm(ray_direction)  # Нормализуем вектор
+                # Вектор от камеры к центру грани
+                ray_direction = np.array(face_center) - np.array([0, 0, selected_object.cube_params['distance']])
+                ray_direction /= np.linalg.norm(ray_direction)  # Нормализуем вектор
 
-        # Вектор от камеры к вершине грани (первой вершине в face)
-        ray_origin = np.array([0, 0, cube_params['distance']])
-        face_vertex = translated_vertices[face[0]]
-        ray_to_vertex = np.array(face_vertex) - ray_origin
+                # Вектор от камеры к вершине грани (первой вершине в face)
+                ray_origin = np.array([0, 0, cube.cube_params['distance']])
+                face_vertex = translated_vertices[face[0]]
+                ray_to_vertex = np.array(face_vertex) - ray_origin
 
-        # Проверка на видимость грани
-        cosine_angle = np.dot(ray_to_vertex, ray_direction)
-        if cosine_angle <= 0:
-            continue  # Грань не видна (луч направлен в противоположную сторону или перпендикулярен)
-        global polygon
-        polygon = [project(translated_vertices[vertex_index]) for vertex_index in face]
-        pygame.draw.polygon(screen, current_material, polygon)
-        # Рисуем рёбра грани (тёмные)
-        for i in range(len(polygon)):
-            start = polygon[i]
-            end = polygon[(i + 1) % len(polygon)]
-            pygame.draw.line(screen, EDGE_COLOR, start, end, 1)
+                # Проверка на видимость грани
+                cosine_angle = np.dot(ray_to_vertex, ray_direction)
+                if cosine_angle <= 0:
+                    continue  # Грань не видна (луч направлен в противоположную сторону или перпендикулярен)
+                global polygon
+                polygon = [project(translated_vertices[vertex_index]) for vertex_index in face]
+                pygame.draw.polygon(screen, selected_object.current_material, polygon)
+                # Рисуем рёбра грани (тёмные)
+                for i in range(len(polygon)):
+                    start = polygon[i]
+                    end = polygon[(i + 1) % len(polygon)]
+                    pygame.draw.line(screen, EDGE_COLOR, start, end, 1)
 
 
 # Функция для обновления параметров куба из GUI
 def update_cube_params_x(value):
-    cube_params['scale_x'] = float(value) / 10
+    selected_object.cube_params['scale_x'] = float(value) / 10
 
 
 def update_cube_params_y(value):
-    cube_params['scale_y'] = float(value) / 10
+    selected_object.cube_params['scale_y'] = float(value) / 10
 
 
 def update_cube_params_z(value):
-    cube_params['scale_z'] = float(value) / 10
+    selected_object.cube_params['scale_z'] = float(value) / 10
 
 
 def update_cube_pos_x(value):
-    cube_params['pos_x'] = float(value)
+    selected_object.cube_params['pos_x'] = float(value)
 
 
 def update_cube_pos_y(value):
-    cube_params['pos_y'] = float(value)
+    selected_object.cube_params['pos_y'] = float(value)
 
 
 def update_cube_pos_z(value):
-    cube_params['pos_z'] = float(value)
+    selected_object.cube_params['pos_z'] = float(value)
 
 
 # Функция для обновления положения камеры
 global camera_pos
 camera_pos = [0, 0, 0]
 
+
 # Функция для обновления положения камеры при нажатии стрелок
 def move_camera(direction):
-    #global camera_pos
+    global camera_pos
     camera_pos = update_camera_position(camera_pos + direction)
 
 
 def update_camera_position(camera_pos):
-    global cube_params
-    cube_params['pos_x'] = camera_pos[0]
-    cube_params['pos_y'] = camera_pos[1]
-    cube_params['pos_z'] = camera_pos[2]
+    selected_object.cube_params['pos_x'] = camera_pos[0]
+    selected_object.cube_params['pos_y'] = camera_pos[1]
+    selected_object.cube_params['pos_z'] = camera_pos[2]
 
 
 def increase_distance():
-    cube_params['distance'] -= 0.5
+    selected_object.cube_params['distance'] -= 0.5
 
 
 def decrease_distance():
-    cube_params['distance'] += 0.5
+    selected_object.cube_params['distance'] += 0.5
 
 
 # Функция для отображения окна с параметрами куба
@@ -288,40 +267,41 @@ def show_cube_params_window():
     scale_x_label = ttk.Label(root, text="Масштаб X")
     scale_x_label.pack()
     scale_x_scale = ttk.Scale(root, from_=1, to=20, orient=tk.HORIZONTAL, command=update_cube_params_x)
-    scale_x_scale.set(cube_params['scale_x'] * 10)
+    scale_x_scale.set(selected_object.cube_params['scale_x'] * 10)
     scale_x_scale.pack()
 
     scale_y_label = ttk.Label(root, text="Масштаб Y")
     scale_y_label.pack()
     scale_y_scale = ttk.Scale(root, from_=1, to=20, orient=tk.HORIZONTAL, command=update_cube_params_y)
-    scale_y_scale.set(cube_params['scale_y'] * 10)
+    scale_y_scale.set(selected_object.cube_params['scale_y'] * 10)
     scale_y_scale.pack()
 
     scale_z_label = ttk.Label(root, text="Масштаб Z")
     scale_z_label.pack()
     scale_z_scale = ttk.Scale(root, from_=1, to=20, orient=tk.HORIZONTAL, command=update_cube_params_z)
-    scale_z_scale.set(cube_params['scale_z'] * 10)
+    scale_z_scale.set(selected_object.cube_params['scale_z'] * 10)
     scale_z_scale.pack()
 
     pos_x_label = ttk.Label(root, text="Позиция X")
     pos_x_label.pack()
     pos_x_scale = ttk.Scale(root, from_=-200, to=200, orient=tk.HORIZONTAL, command=update_cube_pos_x)
-    pos_x_scale.set(cube_params['pos_x'])
+    pos_x_scale.set(selected_object.cube_params['pos_x'])
     pos_x_scale.pack()
 
     pos_y_label = ttk.Label(root, text="Позиция Y")
     pos_y_label.pack()
     pos_y_scale = ttk.Scale(root, from_=-200, to=200, orient=tk.HORIZONTAL, command=update_cube_pos_y)
-    pos_y_scale.set(cube_params['pos_y'])
+    pos_y_scale.set(selected_object.cube_params['pos_y'])
     pos_y_scale.pack()
 
     pos_z_label = ttk.Label(root, text="Позиция Z")
     pos_z_label.pack()
     pos_z_scale = ttk.Scale(root, from_=-200, to=200, orient=tk.HORIZONTAL, command=update_cube_pos_z)
-    pos_z_scale.set(cube_params['pos_z'])
+    pos_z_scale.set(selected_object.cube_params['pos_z'])
     pos_z_scale.pack()
 
     root.mainloop()
+
 
 def mouse_choose_check_cube():
     can_choose_mouse: bool
@@ -332,28 +312,26 @@ def mouse_choose_check_cube():
     if current_mouse_pos[0] <= start[0]:
         can_choose_mouse = False
     if current_mouse_pos[1] <= start[1]:
-        can_choose_mouse = False;
+        can_choose_mouse = False
 
     start = polygon[1]
     if current_mouse_pos[0] >= start[0]:
         can_choose_mouse = False
     start = polygon[3]
     if current_mouse_pos[1] >= start[1]:
-        can_choose_mouse = False;
+        can_choose_mouse = False
 
-    #if current_mouse_pos <= polygon[0]:
-    #    can_choose_mouse = False
-    #if current_mouse_pos >= polygon[1]:
-    #    can_choose_mouse = False
+    if current_mouse_pos <= polygon[0]:
+        can_choose_mouse = False
+    if current_mouse_pos >= polygon[1]:
+        can_choose_mouse = False
     global current_material
     if can_choose_mouse == True:
-        #print("в зоне нажатия")
+        # print("в зоне нажатия")
         if mouse_pressed:
             current_material = BLUE
     if can_choose_mouse == False:
         current_material = WHITE
-        
-
 
 
 # Основная функция отрисовки и управления
@@ -369,6 +347,7 @@ def main():
 
     global params_window_open
     global cube_params
+    global fullscreen
 
     start_button = pygame.Rect(20, 20, 120, 50)
     start_button_text = pygame.font.Font(None, 36).render('Start/Stop', True, WHITE)
@@ -399,18 +378,18 @@ def main():
                     create_material()
                 elif event.key == K_RETURN:
                     # Накладывание текущего материала на куб
-                    draw_cube(vertices, angle_x, angle_y, angle_z)
+                    draw_cube(selected_object.vertices, angle_x, angle_y, angle_z)
                 elif event.key == K_o:
                     # Загрузка куба из файла
                     filename = input("Введите имя файла для загрузки куба: ")
                     loaded_vertices = load_cube_from_file(filename)
                     if loaded_vertices is not None:
-                        vertices[:] = loaded_vertices
+                        selected_object.vertices[:] = loaded_vertices
                         cube_visible = True
                 elif event.key == K_s:
                     # Сохранение куба в файл
                     filename = input("Введите имя файла для сохранения куба: ")
-                    save_cube_to_file(filename, vertices)
+                    # save_cube_to_file(filename, selected_object.vertices)
                 elif event.key == K_p:
                     # Показать окно параметров куба
                     show_cube_params_window()
@@ -442,7 +421,8 @@ def main():
                     camera_pos[0] -= 1
                 elif event.key == K_RIGHT:
                     camera_pos[0] += 1
-
+                elif event.key == K_F11:
+                    fullscreen = not fullscreen
             elif event.type == KEYUP:
                 if event.key == K_LALT or event.key == K_RALT:
                     alt_pressed = False
@@ -477,7 +457,7 @@ def main():
         current_mouse_pos = pygame.mouse.get_pos()
         # Поворот куба с помощью мыши и зажатой клавиши Alt
         if mouse_pressed and alt_pressed:
-            #current_mouse_pos = pygame.mouse.get_pos()
+            # current_mouse_pos = pygame.mouse.get_pos()
             if prev_mouse_pos:
                 dx = current_mouse_pos[0] - prev_mouse_pos[0]
                 dy = current_mouse_pos[1] - prev_mouse_pos[1]
@@ -487,7 +467,7 @@ def main():
 
         # Отрисовка куба, если он видим
         if cube_visible:
-            draw_cube(vertices, angle_x, angle_y, angle_z)
+            draw_cube(selected_object.vertices, angle_x, angle_y, angle_z)
 
         mouse_choose_check_cube()
 
