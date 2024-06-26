@@ -7,6 +7,7 @@ import numpy as np
 import pygame
 from pygame.locals import *
 from objects import *
+from ui import *
 
 # Инициализация Pygame
 pygame.init()
@@ -36,6 +37,8 @@ selected_object = objects['DefaultCube']
 
 # Флаг для открытия окна параметров
 params_window_open = False
+
+preview_window_open = False
 
 mode = 'main'
 music = 'none'
@@ -348,13 +351,19 @@ def main():
     global params_window_open
     global cube_params
     global fullscreen
+    global preview_window_open
 
     start_button = pygame.Rect(20, 20, 120, 50)
     start_button_text = pygame.font.Font(None, 36).render('Start/Stop', True, WHITE)
     start_button_text_rect = start_button_text.get_rect(center=start_button.center)
 
     global current_mouse_pos
-
+    pg.draw.rect(pg.Color('gray'), (0, 0, 1280, 32))
+    if preview_window_open == False:
+        screen.blit(Play, (1248, 0))
+        Play.update()
+    else:
+        screen.blit()
     while True:
         for event in pygame.event.get():
             if event.type == QUIT:
@@ -473,7 +482,20 @@ def main():
 
         pygame.display.flip()
         clock.tick(60)
+    def preview():
+        global preview_window_open
+        root = tk.Tk()
+        root.title('Preview')
 
+        def on_closing():
+            global preview_window_open
+            preview_window_open = False
+            root.destroy()
 
+        root.protocol("WM_DELETE_WINDOW", on_closing)
+
+        will_be_soon = ttk.Label(text='Will be soon')
+        okay = ttk.Button(text='Okay', command=on_closing())
+        root.mainloop()
 if mode == 'main':
     main()
