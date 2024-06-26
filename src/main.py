@@ -18,7 +18,7 @@ screen_width = 1280
 screen_height = 720
 screen_engine = pygame.display.set_mode((screen_width, screen_height), flags=(pygame.DOUBLEBUF))
 pygame.display.set_caption('Space Engine')
-pygame.display.set_icon(pygame.image.load('icon.ico'))
+pygame.display.set_icon(pygame.image.load('../icon.ico'))
 
 # Цвета
 WHITE = (255, 255, 255)
