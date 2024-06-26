@@ -358,12 +358,13 @@ def main():
     start_button_text_rect = start_button_text.get_rect(center=start_button.center)
 
     global current_mouse_pos
-    pg.draw.rect(pg.Color('gray'), (0, 0, 1280, 32))
+    pygame.draw.rect(pygame.Color('gray'), (0, 0, 1280, 32))
     if preview_window_open == False:
         screen.blit(Play, (1248, 0))
         Play.update()
     else:
-        screen.blit()
+        screen.blit(Stop, (1248, 0))
+        Stop.update()
     while True:
         for event in pygame.event.get():
             if event.type == QUIT:
