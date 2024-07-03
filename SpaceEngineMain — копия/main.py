@@ -1,0 +1,2 @@
+from Graphics import *
+start()
