@@ -231,6 +231,7 @@ def draw_cube(vertices, angle_x, angle_y, angle_z):
                 polygon = [
                     project(translated_vertices[vertex_index]) for vertex_index in face
                 ]
+                cube.polygon = polygon
                 pygame.draw.polygon(screen_engine, cube.current_material, polygon)
                 # Рисуем рёбра грани (тёмные)
                 for i in range(len(polygon)):
@@ -418,35 +419,36 @@ def create_new_object():
 
     root.mainloop()
 
-# def mouse_choose_check_cube():
-#     can_choose_mouse: bool
-#     can_choose_mouse = True
-#     global polygon
-#     global mouse_pressed
-#     start = polygon[0]
-#     if current_mouse_pos[0] <= start[0]:
-#         can_choose_mouse = False
-#     if current_mouse_pos[1] <= start[1]:
-#         can_choose_mouse = False
-#
-#     start = polygon[1]
-#     if current_mouse_pos[0] >= start[0]:
-#         can_choose_mouse = False
-#     start = polygon[3]
-#     if current_mouse_pos[1] >= start[1]:
-#         can_choose_mouse = False
-#
-#     if current_mouse_pos <= polygon[0]:
-#         can_choose_mouse = False
-#     if current_mouse_pos >= polygon[1]:
-#         can_choose_mouse = False
-#     global current_material
-#     if can_choose_mouse == True:
-#         # print("в зоне нажатия")
-#         if mouse_pressed:
-#             current_material = BLUE
-#     if can_choose_mouse == False:
-#         current_material = WHITE
+def mouse_choose_check_cube():
+    can_choose_mouse: bool
+    can_choose_mouse = True
+    global polygon
+    global mouse_pressed
+    for o in objects.values():
+
+        start = o.polygon[0]
+        if current_mouse_pos[0] <= start[0]:
+            can_choose_mouse = False
+            print("-1")
+        if current_mouse_pos[1] <= start[1]:
+            can_choose_mouse = False
+            print("0")
+        start = o.polygon[1]
+        if current_mouse_pos[0] >= start[0]:
+            can_choose_mouse = False
+            print("1")
+        start = o.polygon[3]
+        if current_mouse_pos[1] >= start[1]:
+            can_choose_mouse = False
+            print("2")
+        global current_material
+        if can_choose_mouse == True:
+            print("в зоне нажатия")
+            if mouse_pressed:
+                o.current_material = BLUE
+        if can_choose_mouse == False:
+            o.current_material = WHITE
+        print(o.polygon)
 
 
 # --------------------------------------------------------- MAIN ---------------------------------------------------------# CREATE MAT, DRAW CUBE,
@@ -574,6 +576,8 @@ def main():
         # Отрисовка куба, если он видим
         if cube_visible:
             draw_cube(selected_object.vertices, angle_x, angle_y, angle_z)
+
+        mouse_choose_check_cube()
 
         pygame.display.flip()
         clock.tick(60)

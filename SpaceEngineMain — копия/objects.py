@@ -30,6 +30,7 @@ class Cube:
             "pos_z": 0,
             "distance": 5,
         },
+        polygon = [0] * 20
     ):
         self.name = name
         self.vertices = vertices
