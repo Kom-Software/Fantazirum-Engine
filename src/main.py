@@ -14,7 +14,7 @@ WIDTH, HEIGHT = 800, 600
 
 pygame.display.set_caption("Fantazirum Engine v2")
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_icon(pygame.image.load("icon.ico"))
+pygame.display.set_icon(pygame.image.load("FR Engine.ico"))
 
 
 scale = 100
