@@ -12,7 +12,7 @@ ORANGE = (237,118,14)
 
 WIDTH, HEIGHT = 800, 600
 
-pygame.display.set_caption("Space Engine v2")
+pygame.display.set_caption("Fantazirum Engine v2")
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_icon(pygame.image.load("icon.ico"))
 
